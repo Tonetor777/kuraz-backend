@@ -27,20 +27,31 @@ def home():
 
 @app.route('/api/tasks', methods=['GET'])
 @swag_from({
+     'parameters': [
+        {
+            'name': 'status',
+            'in': 'query',
+            'type': 'string',
+            'enum': ['completed', 'pending'],
+            'description': 'Filtering tasks by status'
+        }
+    ],
     'responses': {
         200: {
-            'description': 'List of tasks',
-            'examples': {
-                'application/json': [
-                    {'id': 1, 'title': 'Task', 'completed': False}
-                ]
-            }
+            'description': 'List of tasks'
         }
     }
 })
 def get_tasks():
     tasks = read_tasks()
-    return jsonify(tasks), 200
+    status = request.args.get('status')
+    if status == 'completed':
+        filtered = [task for task in tasks if task['completed']]
+    elif status == 'pending':
+        filtered = [task for task in tasks if not task['completed']]
+    else:
+        filtered = tasks
+    return jsonify(filtered), 200
 
 
 @app.route('/api/tasks', methods=['POST'])
@@ -66,7 +77,8 @@ def get_tasks():
 })
 def add_task():
     data = request.get_json()
-    if not data or 'title' not in data:
+    title = data.get('title', '').strip()
+    if not title:
         return jsonify({'error': 'Task title is required'}), 400
 
     tasks = read_tasks()
